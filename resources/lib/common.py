@@ -29,37 +29,32 @@ def getFinalUrl(url):
 	return link
 		
 def OpenURL(url, headers={}, user_data={}, cookieJar=None, justCookie=False):
-	if isinstance(url, unicode):
-		url = url.encode('utf8')
 	#url = urllib.quote(url, ':/')
-	cookie_handler = urllib3.HTTPCookieProcessor(cookieJar)
+	cookie_handler = urllib.request.HTTPCookieProcessor(cookieJar)
 	opener = requests.Session()
-	opener.cookies = cookie_handler
+	if cookieJar is not None:
+		opener.cookies = cookieJar
     # opener = urllib3.build_opener(cookie_handler, urllib3.HTTPBasicAuthHandler(), urllib3.HTTPHandler())
+	opener.headers.update({'Accept-encoding': 'gzip'})
+	if "User-Agent" not in opener.headers.keys():
+		opener.headers.update({'User-Agent': UA})
 	if user_data:
-		# user_data = urllib.urlencode(user_data)
-		# req = urllib3.Request(url, user_data)
- 		req = opener.get(url, user_data)
+ 	 	response = opener.get(url, data=user_data, stream=True)
 	else:
-		req = opener.get(url)
-	req.add_header('Accept-encoding', 'gzip')
-	for k, v in headers.items():
-		req.add_header(k, v)
-	if not req.headers.has_key('User-Agent') or req.headers['User-Agent'] == '':
-		req.add_header('User-Agent', UA)
-	response = opener.open(req)
+ 	 	response = opener.get(url, stream=True)
 	if justCookie == True:
-		if response.info().has_key("Set-Cookie"):
-			data = response.info()['Set-Cookie']
+		if "Set-Cookie" in response.headers:
+ 	 	 	data = response.headers['Set-Cookie']
 		else:
 			data = None
 	else:
-		if response.info().get('Content-Encoding') == 'gzip':
-			buf = StringIO(response.read())
-			f = gzip.GzipFile(fileobj=buf)
-			data = f.read().replace("\r", "")
+		if "Content-Encoding" in response.headers.keys() and response.headers['Content-Encoding'] == 'gzip':
+			data = ""
+			for chunk in response.iter_content(chunk_size=1024):
+				data += chunk
+			data.replace("\r", "")
 		else:
-			data = response.read().replace("\r", "")
+			data = response.text.replace("\r", "")
 	response.close()
 	return data
 
