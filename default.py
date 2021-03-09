@@ -61,7 +61,7 @@ def AddListItems(chList, addToVdir=True):
         epg = item.get('epg', '')
         cacheMin = item.get('cache', '0')
         if item["url"].startswith('http'):
-            cacheList.append(hashlib.md5(item["url"]).hexdigest())
+            cacheList.append(hashlib.md5(item["url"].encode("utf-8")).hexdigest())
         AddDir("[{0}]".format(name) ,item["url"], mode, image, logos, epg, index=i, uuid=uuid4, cacheMin=cacheMin, addToVdir=addToVdir)
         i += 1
 
