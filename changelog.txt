@@ -1,3 +1,5 @@
+1.5.0
+- Added Python 3 support for Kodi 19 (Matrix)
 1.4.8
 - EPG fix for list of channel names under the same id number
 1.4.7
