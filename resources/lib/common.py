@@ -17,15 +17,14 @@ UA = 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100101 Firefox/11.0'
 def getFinalUrl(url):
 	link = url
 	try:
-		req = urllib3.Request(url)
-		req.add_header('User-Agent', UA)
 		opener = requests.Session()
-		f = opener.get(req)
+		opener.headers.update({'User-Agent': UA})
+		f = opener.get(url)
 		link = f.url
 		if link is None or link == '':
 			link = url
 	except Exception as ex:
-		xbmc.log(str(ex), 3)
+		xbmc.log(str(ex), xbmc.LOGERROR)
 	return link
 		
 def OpenURL(url, headers={}, user_data={}, cookieJar=None, justCookie=False):
@@ -49,12 +48,13 @@ def OpenURL(url, headers={}, user_data={}, cookieJar=None, justCookie=False):
 			data = None
 	else:
 		if "Content-Encoding" in response.headers.keys() and response.headers['Content-Encoding'] == 'gzip':
-			data = ""
+			data = bytes()
 			for chunk in response.iter_content(chunk_size=1024):
 				data += chunk
-			data.replace("\r", "")
+			# data.decode("utf-8").replace("\r", "")
 		else:
-			data = response.text.replace("\r", "")
+			# data = response.text.replace("\r", "")
+			data = response.content
 	response.close()
 	return data
 
