@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.playlistLoader" name="Playlist Loader" version="1.4.8" provider-name="osgioia">
+<addon id="plugin.video.playlistLoader" name="Playlist Loader" version="1.5.0" provider-name="fedevx">
   <requires>
-    <import addon="xbmc.python" version="2.1.0"/>
-    <import addon="script.module.requests" version="2.9.1"/>
+    <import addon="xbmc.python" version="3.0.0"/>
+    <import addon="script.module.requests" version="2.22.0+matrix.1"/>
     <import addon="script.module.xmltodict" version="0.11.0"/>
     <import addon="script.module.dateutil" version="2.8.1"/>
   </requires>
@@ -14,8 +14,13 @@
     <summary lang="he">Playlist Loader</summary>
     <description lang="en">Playlist Loader</description>
     <description lang="he">Playlist Loader</description>
+    <assets>
+	    <icon>icon.png</icon>
+    </assets>
     <platform>all</platform>
 	<news>
+1.5.0
+- Added Kodi Matrix Support
 1.4.8
 - EPG fix for list of channel names under the same id number
 1.4.7

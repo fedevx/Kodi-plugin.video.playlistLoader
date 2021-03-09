@@ -1,5 +1,4 @@
-import urllib, urllib2, os, io, xbmc, xbmcaddon, xbmcgui, json, re, chardet, shutil, time, hashlib, gzip, xbmcvfs, requests
-from StringIO import StringIO
+import urllib, urllib3, os, io, xbmc, xbmcaddon, xbmcgui, json, re, chardet, shutil, time, hashlib, gzip, xbmcvfs, requests
 import requests, shutil
 from xbmc import getLocalizedString
 import xmltodict
@@ -8,28 +7,20 @@ AddonID = 'plugin.video.playlistLoader'
 Addon = xbmcaddon.Addon(AddonID)
 icon = Addon.getAddonInfo('icon')
 AddonName = Addon.getAddonInfo("name")
-addon_data_dir = xbmc.translatePath(Addon.getAddonInfo("profile")).decode("utf-8")
+addon_data_dir = xbmcvfs.translatePath(Addon.getAddonInfo("profile"))
 cacheDir = os.path.join(addon_data_dir, "cache")
 tvdb_path = os.path.join(cacheDir, "TVDB")
 tmdb_path = os.path.join(cacheDir, "TMDB")
 UA = 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100101 Firefox/11.0'
 
-class SmartRedirectHandler(urllib2.HTTPRedirectHandler):
-	def http_error_301(self, req, fp, code, msg, headers):
-		result = urllib2.HTTPRedirectHandler.http_error_301(self, req, fp, code, msg, headers)
-		return result
-
-	def http_error_302(self, req, fp, code, msg, headers):
-		result = urllib2.HTTPRedirectHandler.http_error_302(self, req, fp, code, msg, headers)
-		return result
 
 def getFinalUrl(url):
 	link = url
 	try:
-		req = urllib2.Request(url)
+		req = urllib3.Request(url)
 		req.add_header('User-Agent', UA)
-		opener = urllib2.build_opener(SmartRedirectHandler())
-		f = opener.open(req)
+		opener = requests.Session()
+		f = opener.get(req)
 		link = f.url
 		if link is None or link == '':
 			link = url
@@ -41,13 +32,16 @@ def OpenURL(url, headers={}, user_data={}, cookieJar=None, justCookie=False):
 	if isinstance(url, unicode):
 		url = url.encode('utf8')
 	#url = urllib.quote(url, ':/')
-	cookie_handler = urllib2.HTTPCookieProcessor(cookieJar)
-	opener = urllib2.build_opener(cookie_handler, urllib2.HTTPBasicAuthHandler(), urllib2.HTTPHandler())
+	cookie_handler = urllib3.HTTPCookieProcessor(cookieJar)
+	opener = requests.Session()
+	opener.cookies = cookie_handler
+    # opener = urllib3.build_opener(cookie_handler, urllib3.HTTPBasicAuthHandler(), urllib3.HTTPHandler())
 	if user_data:
-		user_data = urllib.urlencode(user_data)
-		req = urllib2.Request(url, user_data)
+		# user_data = urllib.urlencode(user_data)
+		# req = urllib3.Request(url, user_data)
+ 		req = opener.get(url, user_data)
 	else:
-		req = urllib2.Request(url)
+		req = opener.get(url)
 	req.add_header('Accept-encoding', 'gzip')
 	for k, v in headers.items():
 		req.add_header(k, v)
@@ -103,8 +97,8 @@ def ReadList(fileName):
 
 def SaveList(filname, chList):
 	try:
-		with io.open(filname, 'w', encoding='utf-8') as handle:
-			handle.write(unicode(json.dumps(chList, indent=4, ensure_ascii=False)))
+		with open(filname, 'w', encoding='utf-8') as handle:
+			json.dump(chList, handle, indent=4, ensure_ascii=False)
 		success = True
 	except Exception as ex:
 		xbmc.log(str(ex), 3)
@@ -126,7 +120,7 @@ def isFromCache(address, cache=0):
 		fileLocation = os.path.join(cacheDir, hashlib.md5(address.encode('utf8')).hexdigest())
 		retval = isFileNew(fileLocation, cache*60)
 	else:
-		retval = isFileNew(address.decode('utf-8'), cache*60)
+		retval = isFileNew(address, cache*60)
 	return retval
 
 def GetList(address, cache=0):
@@ -140,7 +134,7 @@ def GetList(address, cache=0):
 			if cache > 0:
 				SaveFile(fileLocation, response)
 	else:
-		response = ReadFile(address.decode('utf-8'))
+		response = ReadFile(address)
 	return response
 		
 def plx2list(url, cache):
@@ -176,7 +170,7 @@ def m3u2list(url, cache):
 		li.append(item_data)
 	chList = []
 	for channel in li:
-		item_data = {"display_name": (channel["display_name"].decode("utf-8", "ignore")), "url": channel["url"]}
+		item_data = {"display_name": (channel["display_name"]), "url": channel["url"]}
 		matches=re.compile(' (.*?)="(.*?)"').findall(channel["params"])
 		for field, value in matches:
 			item_data[field.strip().lower().replace('-', '_')] = value.strip()
@@ -186,7 +180,7 @@ def m3u2list(url, cache):
 def SaveDict(filname, dict):
 	try:
 		with io.open(filname, 'w', encoding='utf-8') as handle:
-			handle.write(json.dumps(dict).decode('utf-8'))
+			handle.write(json.dumps(dict))
 			handle.close()
 		success = True
 	except Exception as ex:
@@ -266,10 +260,10 @@ def epg2dict(url, cache):
 	
 def GetEncodeString(str):
 	try:
-		str = str.decode(chardet.detect(str)["encoding"]).encode("utf-8")
+		str = str.decode(chardet.detect(str)["encoding"])
 	except:
 		try:
-			str = str.encode("utf-8")
+			str = str
 		except:
 			pass
 	return str

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # code by Avigdor and Nux007 (https://github.com/Nux007/Kodi-plugin.video.playlistLoader)
-import urllib, urlparse, sys, xbmcplugin ,xbmcgui, xbmcaddon, xbmc, os, json, hashlib, uuid as random
+import urllib, urllib3, sys, xbmcplugin ,xbmcgui, xbmcaddon, xbmc, xbmcvfs, os, json, hashlib, uuid as random
 from datetime import datetime
 from dateutil import parser
 from dateutil import tz
@@ -10,14 +10,14 @@ Addon = xbmcaddon.Addon(AddonID)
 AddonName = Addon.getAddonInfo("name")
 icon = Addon.getAddonInfo('icon')
 
-addonDir = Addon.getAddonInfo('path').decode("utf-8")
+addonDir = Addon.getAddonInfo('path')
 iconsDir = os.path.join(addonDir, "resources", "images")
 
 libDir = os.path.join(addonDir, 'resources', 'lib')
 sys.path.insert(0, libDir)
 import common
 
-addon_data_dir = xbmc.translatePath(Addon.getAddonInfo("profile")).decode("utf-8")
+addon_data_dir = xbmcvfs.translatePath(Addon.getAddonInfo("profile"))
 cacheDir = os.path.join(addon_data_dir, "cache")
 if not os.path.exists(cacheDir):
     os.makedirs(cacheDir)
@@ -38,7 +38,7 @@ makeGroups = Addon.getSetting("makeGroups") == "true"
     
     
 def getLocaleString(id):
-    return Addon.getLocalizedString(id).encode('utf-8')
+    return Addon.getLocalizedString(id)
 
 
 
@@ -54,15 +54,15 @@ def AddListItems(chList, addToVdir=True):
         image = item.get('image', '')
         uuid4 = item["uuid"]
         
-        if image.encode("utf-8") is "" or image is None:
+        if image == "" or image is None:
             image = os.path.join(iconsDir, "default-list-image.png")
         
         logos = item.get('logos', '')
         epg = item.get('epg', '')
         cacheMin = item.get('cache', '0')
         if item["url"].startswith('http'):
-            cacheList.append(hashlib.md5(item["url"].encode("utf-8")).hexdigest())
-        AddDir("[{0}]".format(name) ,item["url"].encode("utf-8"), mode, image.encode("utf-8"), logos.encode("utf-8"), epg.encode("utf-8"), index=i, uuid=uuid4.encode("utf-8"), cacheMin=cacheMin, addToVdir=addToVdir)
+            cacheList.append(hashlib.md5(item["url"]).hexdigest())
+        AddDir("[{0}]".format(name) ,item["url"], mode, image, logos, epg, index=i, uuid=uuid4, cacheMin=cacheMin, addToVdir=addToVdir)
         i += 1
 
     for the_file in os.listdir(cacheDir):
@@ -92,8 +92,8 @@ def Categories():
     vDirs = common.ReadList(vDirectoriesFile)
     y = 0
     for vDir in vDirs:
-        dir_icon = vDir["icon"].encode("utf-8") if not vDir["icon"].encode("utf-8") is "" else os.path.join(iconsDir, "default-folder-image.png")
-        AddDir("[COLOR green][B]{0}[/B][/COLOR]".format(vDir["name"].encode("utf8")), "{0}".format(y) , 44 , dir_icon, uuid=vDir["uuid"].encode("utf-8"), isFolder=True)
+        dir_icon = vDir["icon"] if not vDir["icon"] == "" else os.path.join(iconsDir, "default-folder-image.png")
+        AddDir("[COLOR green][B]{0}[/B][/COLOR]".format(vDir["name"]), "{0}".format(y) , 44 , dir_icon, uuid=vDir["uuid"], isFolder=True)
         y += 1
     
     ignored = []
@@ -106,7 +106,7 @@ def Categories():
     addList = []
     try:	
         for uitem in chList:
-            if "uuid" in uitem and not uitem["uuid"].encode("utf-8") in ignored:
+            if "uuid" in uitem and not uitem["uuid"] in ignored:
                 addList.append(chList[i])
             i += 1
     except:
@@ -118,6 +118,7 @@ def Categories():
 
 
 def AddNewList():
+    xbmc.log("Tracker AddNewList", xbmc.LOGINFO)
     listName = GetKeyboardText(getLocaleString(30004)).strip()
     if len(listName) < 1:
         return
@@ -128,7 +129,8 @@ def AddNewList():
     logosUrl = '' if listUrl.endswith('.plx') else GetChoice(30018, 30019, 30020, 30019, 30020, 30021, fileType=0)
     if logosUrl.startswith('http') and not logosUrl.endswith('/'):
         logosUrl += '/'
-    epgUrl = '' if listUrl.endswith('.plx') else GetChoice(30046, 30047, 30048, 30047, 30048, 30021, fileType=0)
+    # epgUrl = '' if listUrl.endswith('.plx') else GetChoice(30104, 30105, 30106, 30105, 30106, 30021, fileType=0)
+    epgUrl = '' if listUrl.endswith('.plx') else GetChoice(30104, 30105, 30106, 30105, 30106, 30021, fileType=0)
     if epgUrl.startswith('http') and not epgUrl.endswith('/'):
         epgUrl += '/'
     cacheInMinutes = GetNumFromUser(getLocaleString(30034), '0') if listUrl.startswith('http') else 0
@@ -137,11 +139,11 @@ def AddNewList():
     chList = common.ReadList(playlistsFile)
     for item in chList:
         if item["url"].lower() == listUrl.lower():
-            xbmc.executebuiltin('Notification({0}, "{1}" {2}, 5000, {3})'.format(AddonName, item["name"].encode("utf-8"), getLocaleString(30007), icon))
+            xbmc.executebuiltin('Notification({0}, "{1}" {2}, 5000, {3})'.format(AddonName, item["name"], getLocaleString(30007), icon))
             return
-    chList.append({"name": listName.decode("utf-8"), "url": listUrl, "image": image, "logos": logosUrl, "epg": epgUrl, "cache": cacheInMinutes, "uuid":str(random.uuid4())})
+    chList.append({"name": listName, "url": listUrl, "image": image, "logos": logosUrl, "epg": epgUrl, "cache": cacheInMinutes, "uuid":str(random.uuid4())})
     if common.SaveList(playlistsFile, chList):
-        xbmc.executebuiltin("XBMC.Container.Refresh()")
+        xbmc.executebuiltin("Container.Refresh()")
 
 
 
@@ -156,11 +158,11 @@ def GetChoice(choiceTitle, fileTitle, urlTitle, choiceFile, choiceUrl, choiceNon
     if choiceNone is None and method == 0 or choiceNone is not None and method == 1:
         if not defaultText.startswith('http'):
             defaultText = ""
-        choice = GetKeyboardText(getLocaleString(fileTitle), defaultText).strip().decode("utf-8")
+        choice = GetKeyboardText(getLocaleString(fileTitle), defaultText).strip()
     elif choiceNone is None and method == 1 or choiceNone is not None and method == 2:
         if defaultText.startswith('http'):
             defaultText = ""
-        choice = xbmcgui.Dialog().browse(fileType, getLocaleString(urlTitle), 'files', fileMask, False, False, defaultText).decode("utf-8")
+        choice = xbmcgui.Dialog().browse(fileType, getLocaleString(urlTitle), 'files', fileMask, False, False, defaultText)
     return choice
     
     
@@ -179,7 +181,7 @@ def RemoveFromLists(iuuid, listFile):
     
     i = 0
     for playlist in chList:
-        if playlist["uuid"].encode("utf-8") == iuuid.encode("utf-8"):
+        if playlist["uuid"] == iuuid:
             del chList[i]
         i += 1
     
@@ -187,14 +189,14 @@ def RemoveFromLists(iuuid, listFile):
     for vDir in vDirsList:
         i = 0
         for uuid4 in vDir["data"]:
-            if iuuid.encode("utf-8") in uuid4.encode("utf-8"):
+            if iuuid in uuid4:
                 del vDir["data"][i]
             i += 1
             
     common.SaveList(listFile, chList)
     common.SaveList(vDirectoriesFile, vDirsList)
     
-    xbmc.executebuiltin("XBMC.Container.Refresh()")
+    xbmc.executebuiltin("Container.Refresh()")
     
     
 def RemoveFromFavourites(index):
@@ -204,7 +206,7 @@ def RemoveFromFavourites(index):
         return
     del favList[index]
     common.SaveList(favoritesFile, favList)
-    xbmc.executebuiltin("XBMC.Container.Refresh()")
+    xbmc.executebuiltin("Container.Refresh()")
 
 
             
@@ -216,10 +218,10 @@ def PlxCategory(url, cache):
         iconimage = "" if not channel.has_key("thumb") else common.GetEncodeString(channel["thumb"])
         name = common.GetEncodeString(channel["name"])
         if channel["type"] == 'playlist':
-            AddDir("[{0}]".format(name) ,channel["url"].encode("utf-8"), 1, iconimage, background=background.encode("utf-8"))
+            AddDir("[{0}]".format(name) ,channel["url"], 1, iconimage, background=background)
         else:
-            AddDir(name, channel["url"].encode("utf-8"), 3, iconimage, isFolder=False, IsPlayable=True, background=background)
-            tmpList.append({"url": channel["url"], "image": iconimage.decode("utf-8"), "name": name.decode("utf-8")})
+            AddDir(name, channel["url"], 3, iconimage, isFolder=False, IsPlayable=True, background=background)
+            tmpList.append({"url": channel["url"], "image": iconimage, "name": name})
             
     common.SaveList(tmpListFile, tmpList)
     
@@ -287,8 +289,8 @@ def m3uCategory(url, logos, epg, cache, mode, gListIndex=-1):
                 image = channel.get("tvg_logo", channel.get("logo", ""))
                 '''
                 if image == "" and epgDict:
-                    if name.decode('utf-8') in epgDict.get(u'name'):
-                        image = epgDict[u'data'][epgDict[u'name'].index(name.decode('utf-8'))][1]
+                    if name in epgDict.get(u'name'):
+                        image = epgDict[u'data'][epgDict[u'name'].index(name)][1]
                     if name in epgDict.get(u'name'):
                         image = epgDict[u'data'][epgDict[u'name'].index(name)][1]
 '''
@@ -296,8 +298,8 @@ def m3uCategory(url, logos, epg, cache, mode, gListIndex=-1):
                     idx = None
                     id = None
                     if epgDict.get(u'name'):
-                        if name.decode('utf-8') in epgDict.get(u'name'):
-                            idx = epgDict[u'name'].index(name.decode('utf-8'))
+                        if name in epgDict.get(u'name'):
+                            idx = epgDict[u'name'].index(name)
                         if name in epgDict.get(u'name'):
                             idx = epgDict[u'name'].index(name)
                         if image == "" and idx is not None:
@@ -329,7 +331,7 @@ def m3uCategory(url, logos, epg, cache, mode, gListIndex=-1):
                                         if not t2len: t2len = len(name)
                                         if not next:
                                             plot += '[B][COLOR FF0084FF]%s-%s[/COLOR] [COLOR FFFFFFFF] %s[/COLOR][/B]' % (ebgn, eend, title)
-                                            name = '[B]%s[/B]\n%s' % (name.ljust(int(t2len * 1.65)), title2nd.encode('utf-8'))
+                                            name = '[B]%s[/B]\n%s' % (name.ljust(int(t2len * 1.65)), title2nd)
                                             next = True
                                         else: 
                                             plot += '[COLOR FF999999]\n\n%s-%s %s[/COLOR]\n' % (ebgn, eend, title) 
@@ -340,7 +342,7 @@ def m3uCategory(url, logos, epg, cache, mode, gListIndex=-1):
                 if logos is not None and logos != ''  and image != "" and not image.startswith('http'):
                     image = logos + image
                 AddDir(name, chUrl, 3, image, epg=epg, index=-1, isFolder=False, IsPlayable=True, plot=plot, fanart=fanart)
-            tmpList.append({"url": chUrl.decode("utf-8"), "image": image.decode("utf-8"), "name": name.decode("utf-8")})
+            tmpList.append({"url": chUrl, "image": image, "name": name})
     
     common.SaveList(tmpListFile, tmpList)
         
@@ -371,7 +373,8 @@ def PlayUrl(name, url, iconimage=None):
 def AddDir(name, url, mode, iconimage='', logos='', epg='', index=-1, move=0, uuid='0', isFolder=True, IsPlayable=False, background=None, cacheMin='0', plot="", fanart="", addToVdir=True):
     urlParams = {'name': name, 'url': url, 'mode': mode, 'iconimage': iconimage, 'logos': logos, 'epg': epg, 'cache': cacheMin, 'uuid': uuid}
     
-    liz = xbmcgui.ListItem(name, iconImage=iconimage, thumbnailImage=iconimage)
+    liz = xbmcgui.ListItem(name)
+    liz.setArt({"icon": iconimage, "thumb": iconimage})
     liz.setInfo(type="Video", infoLabels={ "Title": name, "plot": plot, "plotoutline": plot, "tagline": plot})
     liz.setProperty("fanart_image", fanart)
     items = []
@@ -385,37 +388,37 @@ def AddDir(name, url, mode, iconimage='', logos='', epg='', index=-1, move=0, uu
     
     if mode == 1 or mode == 2:
         items = [
-            (getLocaleString(30008), 'XBMC.RunPlugin({0}?index={1}&mode=22&uuid={2})'.format(sys.argv[0], index, uuid)),
-            (getLocaleString(30026), 'XBMC.RunPlugin({0}?index={1}&mode=23&uuid={2})'.format(sys.argv[0], index, uuid)),
-            (getLocaleString(30027), 'XBMC.RunPlugin({0}?index={1}&mode=24&uuid={2})'.format(sys.argv[0], index, uuid)),
-            (getLocaleString(30028), 'XBMC.RunPlugin({0}?index={1}&mode=25&uuid={2})'.format(sys.argv[0], index, uuid))
+            (getLocaleString(30008), 'RunPlugin({0}?index={1}&mode=22&uuid={2})'.format(sys.argv[0], index, uuid)),
+            (getLocaleString(30026), 'RunPlugin({0}?index={1}&mode=23&uuid={2})'.format(sys.argv[0], index, uuid)),
+            (getLocaleString(30027), 'RunPlugin({0}?index={1}&mode=24&uuid={2})'.format(sys.argv[0], index, uuid)),
+            (getLocaleString(30028), 'RunPlugin({0}?index={1}&mode=25&uuid={2})'.format(sys.argv[0], index, uuid))
         ]
         
         if mode == 2 and not url.endswith('.plx'):
-            items.append((getLocaleString(30029), 'XBMC.RunPlugin({0}?index={1}&mode=26&uuid={2})'.format(sys.argv[0], index, uuid)))
-            items.append((getLocaleString(30045), 'XBMC.RunPlugin({0}?index={1}&mode=29&uuid={2})'.format(sys.argv[0], index, uuid)))
+            items.append((getLocaleString(30029), 'RunPlugin({0}?index={1}&mode=26&uuid={2})'.format(sys.argv[0], index, uuid)))
+            items.append((getLocaleString(30103), 'RunPlugin({0}?index={1}&mode=29&uuid={2})'.format(sys.argv[0], index, uuid)))
         if url.startswith('http'):
-            items.append((getLocaleString(30035), 'XBMC.RunPlugin({0}?index={1}&mode=28&uuid={2})'.format(sys.argv[0], index, uuid)))
+            items.append((getLocaleString(30035), 'RunPlugin({0}?index={1}&mode=28&uuid={2})'.format(sys.argv[0], index, uuid)))
                     
     elif mode == 3:
         items = [
-            (getLocaleString(30009), 'XBMC.RunPlugin({0}?url={1}&mode=31&iconimage={2}&name={3}&uuid={4})'.format(sys.argv[0], urllib.quote_plus(url), iconimage, name, uuid))
+            (getLocaleString(30009), 'RunPlugin({0}?url={1}&mode=31&iconimage={2}&name={3}&uuid={4})'.format(sys.argv[0], urllib.parse.quote_plus(url), iconimage, name, uuid))
         ]
     
     elif mode == 32:
         items = [
-            (getLocaleString(30010), 'XBMC.RunPlugin({0}?index={1}&mode=33)'.format(sys.argv[0], index)),
-            (getLocaleString(30026), 'XBMC.RunPlugin({0}?index={1}&mode=35)'.format(sys.argv[0], index)),
-            (getLocaleString(30027), 'XBMC.RunPlugin({0}?index={1}&mode=36)'.format(sys.argv[0], index)),
-            (getLocaleString(30028), 'XBMC.RunPlugin({0}?index={1}&mode=37)'.format(sys.argv[0], index))
+            (getLocaleString(30010), 'RunPlugin({0}?index={1}&mode=33)'.format(sys.argv[0], index)),
+            (getLocaleString(30026), 'RunPlugin({0}?index={1}&mode=35)'.format(sys.argv[0], index)),
+            (getLocaleString(30027), 'RunPlugin({0}?index={1}&mode=36)'.format(sys.argv[0], index)),
+            (getLocaleString(30028), 'RunPlugin({0}?index={1}&mode=37)'.format(sys.argv[0], index))
         ]
         listMode = 38 # Favourits
     
     
     elif mode == 44:
         items = [
-            (getLocaleString(30043), 'XBMC.RunPlugin({0}?index={1}&mode=46&uuid={2})'.format(sys.argv[0], index, uuid)),
-            (getLocaleString(30044), 'XBMC.RunPlugin({0}?index={1}&mode=47&uuid={2})'.format(sys.argv[0], index, uuid))
+            (getLocaleString(30043), 'RunPlugin({0}?index={1}&mode=46&uuid={2})'.format(sys.argv[0], index, uuid)),
+            (getLocaleString(30044), 'RunPlugin({0}?index={1}&mode=47&uuid={2})'.format(sys.argv[0], index, uuid))
         ]
         
     '''
@@ -429,14 +432,14 @@ def AddDir(name, url, mode, iconimage='', logos='', epg='', index=-1, move=0, uu
         items += [
             # Moviedb temporary comment ! (getLocaleString(30040), 'XBMC.RunPlugin({0}?index={1}&mode=40&move=0)'.format(sys.argv[0], index)),
             #tvdb_item,
-            (getLocaleString(30030), 'XBMC.RunPlugin({0}?index={1}&mode={2}&move=-1&uuid={3})'.format(sys.argv[0], index, listMode, uuid)),
-            (getLocaleString(30031), 'XBMC.RunPlugin({0}?index={1}&mode={2}&move=1&uuid={3})'.format(sys.argv[0], index, listMode, uuid)),
-            (getLocaleString(30032), 'XBMC.RunPlugin({0}?index={1}&mode={2}&move=0&uuid={3})'.format(sys.argv[0], index, listMode, uuid))
+            (getLocaleString(30030), 'RunPlugin({0}?index={1}&mode={2}&move=-1&uuid={3})'.format(sys.argv[0], index, listMode, uuid)),
+            (getLocaleString(30031), 'RunPlugin({0}?index={1}&mode={2}&move=1&uuid={3})'.format(sys.argv[0], index, listMode, uuid)),
+            (getLocaleString(30032), 'RunPlugin({0}?index={1}&mode={2}&move=0&uuid={3})'.format(sys.argv[0], index, listMode, uuid))
         ]
         
         if addToVdir:
             items += [
-                (getLocaleString(30041), 'XBMC.RunPlugin({0}?index={1}&mode=45&move=-1&uuid={2})'.format(sys.argv[0], index, uuid)),
+                (getLocaleString(30041), 'RunPlugin({0}?index={1}&mode=45&move=-1&uuid={2})'.format(sys.argv[0], index, uuid)),
         ]
     
     if mode == 10:
@@ -445,7 +448,7 @@ def AddDir(name, url, mode, iconimage='', logos='', epg='', index=-1, move=0, uu
         
     liz.addContextMenuItems(items)
         
-    u = '{0}?{1}'.format(sys.argv[0], urllib.urlencode(urlParams))
+    u = '{0}?{1}'.format(sys.argv[0], urllib.parse.urlencode(urlParams))
     xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=u, listitem=liz, isFolder=isFolder)
     
 
@@ -470,20 +473,20 @@ def AddFavorites(url, iconimage, name):
     #Checking if url already in list.
     favList = common.ReadList(favoritesFile)
     for item in favList:
-        if item["url"].lower() == url.decode("utf-8").lower():
+        if item["url"].lower() == url.lower():
             xbmc.executebuiltin("Notification({0}, '{1}' {2}, 5000, {3})".format(AddonName, name, getLocaleString(30011), icon))
             return
     
     chList = common.ReadList(tmpListFile)    
     for channel in chList:
-        if channel["name"].lower() == name.decode("utf-8").lower():
-            url = channel["url"].encode("utf-8")
-            iconimage = channel["image"].encode("utf-8")
+        if channel["name"].lower() == name.lower():
+            url = channel["url"]
+            iconimage = channel["image"]
             break
     if not iconimage:
         iconimage = ""
         
-    data = {"url": url.decode("utf-8"), "image": iconimage.decode("utf-8"), "name": name.decode("utf-8")}
+    data = {"url": url, "image": iconimage, "name": name}
     favList.append(data)
     common.SaveList(favoritesFile, favList)
     xbmc.executebuiltin("Notification({0}, '{1}' {2}, 5000, {3})".format(AddonName, name, getLocaleString(30012), icon))
@@ -491,15 +494,16 @@ def AddFavorites(url, iconimage, name):
 
 
 def AddNewDirectory():
-    dir_name = GetKeyboardText(getLocaleString(30040), "My new directory name").decode("utf-8")
-    dir_icon = xbmcgui.Dialog().browse(1, getLocaleString(30042), 'files').decode("utf-8")
-    
+    xbmc.log("Tracker: AddNewDirectory", xbmc.LOGINFO)
+    dir_name = GetKeyboardText(getLocaleString(30040), "My new directory name")
+    dir_icon = xbmcgui.Dialog().browse(1, getLocaleString(30042), 'files')
+
     if dir_name != "":
         vDirs = common.ReadList(vDirectoriesFile)
         vDirs.append({"name" : dir_name, "data" : [], "icon" : dir_icon, "uuid": str(random.uuid4())})
         
         common.SaveList(vDirectoriesFile, vDirs)
-        xbmc.executebuiltin("XBMC.Container.Refresh()")
+        xbmc.executebuiltin("Container.Refresh()")
 
 
 
@@ -511,7 +515,7 @@ def AddToDirectory(playlist_uuid):
     svdir = dialog.select("Choose the directory were to attach this playlist", [item["name"] for item in vdirs])
     vdirs[svdir]["data"].append(playlist_uuid)
     common.SaveList(vDirectoriesFile, vdirs)
-    xbmc.executebuiltin("XBMC.Container.Refresh()")
+    xbmc.executebuiltin("Container.Refresh()")
 
 
 
@@ -519,20 +523,20 @@ def DeleteDirectory(iuuid, with_contents=False):
     vDirs = common.ReadList(vDirectoriesFile)
     y = 0
     for vdir in vDirs:
-        if vdir["uuid"].encode("utf-8") == iuuid:
+        if vdir["uuid"] == iuuid:
             if with_contents:
                 contents = common.ReadList(playlistsFile)
                 i = 0
                 uuids = vdir["data"]
-                uuids = [uuid4.encode("utf-8") for uuid4 in uuids]
+                uuids = [uuid4 for uuid4 in uuids]
                 for content in contents:
-                    if content["uuid"].encode("utf-8") in uuids:
+                    if content["uuid"] in uuids:
                         del contents[i]
                     i += 1
                 common.SaveList(playlistsFile, contents)
             del vDirs[y]
             common.SaveList(vDirectoriesFile, vDirs)
-            xbmc.executebuiltin("XBMC.Container.Refresh()")
+            xbmc.executebuiltin("Container.Refresh()")
         y += 1
    
     
@@ -549,7 +553,7 @@ def ShowDirectoryContents(directory_uuid):
     
     for pUuid in dirFiles:
         for playlist in chList:
-            if pUuid.encode("utf-8") == playlist["uuid"].encode("utf-8"):
+            if pUuid == playlist["uuid"]:
                 lPlaylists.append(playlist) 
         
     AddListItems(lPlaylists, addToVdir=False)
@@ -561,7 +565,7 @@ def ListFavorites():
     chList = common.ReadList(favoritesFile)
     i = 0
     for channel in chList:
-        AddDir(channel["name"].encode("utf-8"), channel["url"].encode("utf-8"), 32, channel["image"].encode("utf-8"), index=i, isFolder=False, IsPlayable=True)
+        AddDir(channel["name"], channel["url"], 32, channel["image"], index=i, isFolder=False, IsPlayable=True)
         i += 1
     
         
@@ -576,15 +580,15 @@ def AddNewFavorite():
         
     favList = common.ReadList(favoritesFile)
     for item in favList:
-        if item["url"].lower() == chUrl.decode("utf-8").lower():
+        if item["url"].lower() == chUrl.lower():
             xbmc.executebuiltin("Notification({0}, '{1}' {2}, 5000, {3})".format(AddonName, chName, getLocaleString(30011), icon))
             return
             
-    data = {"url": chUrl.decode("utf-8"), "image": image, "name": chName.decode("utf-8")}
+    data = {"url": chUrl, "image": image, "name": chName}
     
     favList.append(data)
     if common.SaveList(favoritesFile, favList):
-        xbmc.executebuiltin("XBMC.Container.Refresh()")
+        xbmc.executebuiltin("Container.Refresh()")
 
 
 
@@ -593,7 +597,7 @@ def GetPlaylistIndex(iuuid, listFile):
     
     i = 0
     for playlist in chList:
-        if playlist["uuid"].encode("utf-8") == iuuid.encode("utf-8"):
+        if playlist["uuid"] == iuuid:
             return i
         i += 1
         
@@ -601,7 +605,7 @@ def GetPlaylistIndex(iuuid, listFile):
 def lsDir(iuuid):
     chDirs = common.ReadList(vDirectoriesFile)
     for vdir in chDirs:
-        if vdir["uuid"].encode("utf-8") == iuuid.encode("utf-8"):
+        if vdir["uuid"] == iuuid:
             return vdir["data"]
     return None
 
@@ -611,27 +615,27 @@ def ChangeKey(iuuid, listFile, key, title, favourites=False):
     chList = common.ReadList(listFile)
     index = GetPlaylistIndex(iuuid, listFile) if not favourites else iuuid
     
-    str = GetKeyboardText(getLocaleString(title), chList[index][key].encode("utf-8"))
+    str = GetKeyboardText(getLocaleString(title), chList[index][key])
     if len(str) < 1:
         return
         
-    chList[index][key] = str.decode("utf-8")
+    chList[index][key] = ""
     if common.SaveList(listFile, chList):
-        xbmc.executebuiltin("XBMC.Container.Refresh()")
+        xbmc.executebuiltin("Container.Refresh()")
         
         
 def ChangeChoice(iuuid, listFile, key, choiceTitle, fileTitle, urlTitle, choiceFile, choiceUrl, choiceNone=None, fileType=1, fileMask=None, favourites=False):
     index = GetPlaylistIndex(iuuid, listFile) if not favourites else iuuid
     chList = common.ReadList(listFile)
     defaultText = chList[index].get(key, "")
-    str = GetChoice(choiceTitle, fileTitle, urlTitle, choiceFile, choiceUrl, choiceNone, fileType, fileMask, defaultText.encode("utf-8"))
+    str = GetChoice(choiceTitle, fileTitle, urlTitle, choiceFile, choiceUrl, choiceNone, fileType, fileMask, defaultText)
     if key == "url" and len(str) < 1:
         return
     elif key == "logos" and str.startswith('http') and not str.endswith('/'):
         str += '/'
-    chList[index][key] = str.decode("utf-8")
+    chList[index][key] = ""
     if common.SaveList(listFile, chList):
-        xbmc.executebuiltin("XBMC.Container.Refresh()")
+        xbmc.executebuiltin("Container.Refresh()")
     
 
 
@@ -651,7 +655,7 @@ def MoveInFavourites(index, step):
     else:
         return
     common.SaveList(favoritesFile, tempList)
-    xbmc.executebuiltin("XBMC.Container.Refresh()")
+    xbmc.executebuiltin("Container.Refresh()")
       
     
 
@@ -683,36 +687,36 @@ def MoveInList(iuuid, step, listFile):
     dir = False
     vdirs = common.ReadList(vDirectoriesFile)
     for vdir in vdirs:
-    	uuids4 = [uuid4.encode("utf-8") for uuid4 in vdir["data"]]
-    	if iuuid.encode("utf-8") in uuids4:
+    	uuids4 = [uuid4 for uuid4 in vdir["data"]]
+    	if iuuid in uuids4:
     		dir = vdir
     
     if not dir is False:
         # Moving two sides, directories and global list ( in case of directory removal )
         dirFiles = lsDir(dir["uuid"])
         
-        ffiles = [tfile for tfile in theList if tfile["uuid"].encode("utf-8") in dirFiles]
-        rfiles = [tfile for tfile in theList if tfile["uuid"].encode("utf-8") not in dirFiles]
+        ffiles = [tfile for tfile in theList if tfile["uuid"] in dirFiles]
+        rfiles = [tfile for tfile in theList if tfile["uuid"] not in dirFiles]
         
-        ffiles = moveOnPlaylist(dirFiles.index(iuuid.encode("utf-8")), step, ffiles)
+        ffiles = moveOnPlaylist(dirFiles.index(iuuid), step, ffiles)
         
         if not ffiles is None:
             common.SaveList(listFile, rfiles + ffiles)
         
         # Movin it directory side.
         idx = vdirs.index(vdir)
-        vdir["data"] = [item["uuid"].encode("utf-8") for item in ffiles]
+        vdir["data"] = [item["uuid"] for item in ffiles]
         vdirs[idx] = vdir
         common.SaveList(vDirectoriesFile, vdirs)
             
     else:
         dirFiles = [item for data in vdirs for item in lsDir(data["uuid"])]
-        dirItems    = [playlist for playlist in common.ReadList(listFile) if playlist["uuid"].encode("utf-8") in dirFiles]
-        notDirFiles = [playlist for playlist in common.ReadList(listFile) if not playlist["uuid"].encode("utf-8") in dirFiles]
+        dirItems    = [playlist for playlist in common.ReadList(listFile) if playlist["uuid"] in dirFiles]
+        notDirFiles = [playlist for playlist in common.ReadList(listFile) if not playlist["uuid"] in dirFiles]
         
         idx = 0
         for playlist in notDirFiles:
-            if playlist["uuid"].encode("utf-8") == iuuid:
+            if playlist["uuid"] == iuuid:
                 break
             idx += 1
         
@@ -721,7 +725,7 @@ def MoveInList(iuuid, step, listFile):
         if not ffiles is None:
             common.SaveList(listFile, dirItems + ffiles)
         
-    xbmc.executebuiltin("XBMC.Container.Refresh()")
+    xbmc.executebuiltin("Container.Refresh()")
     
     '''
     # Moving themoviedb and thetvdb data if any.
@@ -757,16 +761,21 @@ def ChangeCache(iuuid, listFile):
         return
     chList[index]['cache'] = cacheInMinutes
     if common.SaveList(listFile, chList):
-        xbmc.executebuiltin("XBMC.Container.Refresh()")
+        xbmc.executebuiltin("Container.Refresh()")
 
 
 def ToggleGroups():
     notMakeGroups = "false" if makeGroups else "true"
     Addon.setSetting("makeGroups", notMakeGroups)
-    xbmc.executebuiltin("XBMC.Container.Refresh()")
+    xbmc.executebuiltin("Container.Refresh()")
 
 
-params = dict(urlparse.parse_qsl(sys.argv[2].replace('?','')))
+try:
+    params = dict(urllib.parse.parse_qsl(sys.argv[2].replace('?', '')))
+
+except TypeError as e:
+    xbmc.log(e, xbmc.LOGERROR)
+    params = dict()
 url = params.get('url')
 logos = params.get('logos', '')
 epg = params.get('epg', '')
@@ -777,7 +786,7 @@ index = int(params.get('index', '-1'))
 move = int(params.get('move', '0'))
 mode = int(params.get('mode', '0'))
 uuid = params.get('uuid', '0')
-
+xbmc.log(f"Tracker params:\ncache: {cache},\n index: {index},\n move: {move},\n mode: {mode},\n uuid: {uuid}\n", xbmc.LOGINFO)
 
 if mode == 0:
     Categories()
@@ -820,7 +829,7 @@ elif mode == 28:
     ChangeCache(uuid, playlistsFile)
     
 elif mode == 29:
-    ChangeChoice(uuid, playlistsFile, "epg", 30046, 30047, 30048, 30047, 30048, 30021, 0)    
+    ChangeChoice(uuid, playlistsFile, "epg", 30104, 30105, 30106, 30105, 30106, 30021, 0)    
 
 elif mode == 30:
     ListFavorites() 
@@ -885,7 +894,7 @@ elif mode == 41:
             common.OKmsg("The TV Db 1", getLocaleString(30042))
         else:
             common.startTheTvDbScan(index, playlistsFile, token)
-            xbmc.executebuiltin("XBMC.Container.Refresh()")
+            xbmc.executebuiltin("Container.Refresh()")
     else:
         common.OKmsg("The TV Db 2", getLocaleString(30043))
 
@@ -893,14 +902,14 @@ elif mode == 42:
     ok = common.removeTheTvDBData(index)
     if ok:
         common.OKmsg("The TV Db 3", getLocaleString(32034))
-        xbmc.executebuiltin("XBMC.Container.Refresh()")
+        xbmc.executebuiltin("Container.Refresh()")
     else:
         common.OKmsg("The TV Db 4", getLocaleString(32035))
 
         
 elif mode == 50:
     ToggleGroups()
-    
+
 
 
 xbmcplugin.endOfDirectory(int(sys.argv[1]))

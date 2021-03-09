@@ -195,3 +195,19 @@ msgstr ""
 msgctxt "#30102"
 msgid "Delete Favourites file"
 msgstr ""
+
+msgctxt "#30103"
+msgid "Change channels EPG source"
+msgstr ""
+
+msgctxt "#30104"
+msgid "Select channels EPG source"
+msgstr ""
+
+msgctxt "#30105"
+msgid "Channels EPG base URL"
+msgstr ""
+
+msgctxt "#30106"
+msgid "Channels EPG Folder"
+msgstr ""
