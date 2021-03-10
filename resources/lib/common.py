@@ -125,7 +125,7 @@ def GetList(address, cache=0):
 		if fromCache:
 			response = ReadFile(fileLocation)
 		else:
-			response = OpenURL(address)
+			response = OpenURL(address).decode("utf-8")
 			if cache > 0:
 				SaveFile(fileLocation, response)
 	else:

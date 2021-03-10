@@ -615,8 +615,8 @@ def ChangeKey(iuuid, listFile, key, title, favourites=False):
     chList = common.ReadList(listFile)
     index = GetPlaylistIndex(iuuid, listFile) if not favourites else iuuid
     
-    str = GetKeyboardText(getLocaleString(title), chList[index][key])
-    if len(str) < 1:
+    option = GetKeyboardText(getLocaleString(title), chList[index][key])
+    if len(option) < 1:
         return
         
     chList[index][key] = ""
@@ -628,12 +628,12 @@ def ChangeChoice(iuuid, listFile, key, choiceTitle, fileTitle, urlTitle, choiceF
     index = GetPlaylistIndex(iuuid, listFile) if not favourites else iuuid
     chList = common.ReadList(listFile)
     defaultText = chList[index].get(key, "")
-    str = GetChoice(choiceTitle, fileTitle, urlTitle, choiceFile, choiceUrl, choiceNone, fileType, fileMask, defaultText)
-    if key == "url" and len(str) < 1:
+    option = GetChoice(choiceTitle, fileTitle, urlTitle, choiceFile, choiceUrl, choiceNone, fileType, fileMask, defaultText)
+    if key == "url" and len(option) < 1:
         return
-    elif key == "logos" and str.startswith('http') and not str.endswith('/'):
-        str += '/'
-    chList[index][key] = ""
+    elif key == "logos" and option.startswith('http') and not option.endswith('/'):
+        option += '/'
+    chList[index][key] = option
     if common.SaveList(listFile, chList):
         xbmc.executebuiltin("Container.Refresh()")
     
