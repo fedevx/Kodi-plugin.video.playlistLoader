@@ -776,7 +776,10 @@ try:
 except TypeError as e:
     xbmc.log(e, xbmc.LOGERROR)
     params = dict()
-url = params.get('url')
+try:
+    url = params.get('url').splitlines()[0]
+except:
+    url = None
 logos = params.get('logos', '')
 epg = params.get('epg', '')
 name = params.get('name')
