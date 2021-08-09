@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # code by Avigdor and Nux007 (https://github.com/Nux007/Kodi-plugin.video.playlistLoader)
-import urllib, urllib3, sys, xbmcplugin ,xbmcgui, xbmcaddon, xbmc, xbmcvfs, os, json, hashlib, uuid as random
+import urllib, urlparse, sys, xbmcplugin ,xbmcgui, xbmcaddon, xbmc, xbmcvfs, os, json, hashlib, uuid as random
 from datetime import datetime
 from dateutil import parser
 from dateutil import tz
@@ -129,7 +129,6 @@ def AddNewList():
     logosUrl = '' if listUrl.endswith('.plx') else GetChoice(30018, 30019, 30020, 30019, 30020, 30021, fileType=0)
     if logosUrl.startswith('http') and not logosUrl.endswith('/'):
         logosUrl += '/'
-    # epgUrl = '' if listUrl.endswith('.plx') else GetChoice(30104, 30105, 30106, 30105, 30106, 30021, fileType=0)
     epgUrl = '' if listUrl.endswith('.plx') else GetChoice(30104, 30105, 30106, 30105, 30106, 30021, fileType=0)
     if epgUrl.startswith('http') and not epgUrl.endswith('/'):
         epgUrl += '/'
@@ -300,7 +299,7 @@ def m3uCategory(url, logos, epg, cache, mode, gListIndex=-1):
                     if epgDict.get(u'name'):
                         if name in epgDict.get(u'name'):
                             idx = epgDict[u'name'].index(name)
-                        if name in epgDict.get(u'name'):
+                        elif name in epgDict.get(u'name'):
                             idx = epgDict[u'name'].index(name)
                         if image == "" and idx is not None:
                                 image = epgDict[u'data'][idx][1]
@@ -337,6 +336,9 @@ def m3uCategory(url, logos, epg, cache, mode, gListIndex=-1):
                                             plot += '[COLOR FF999999]\n\n%s-%s %s[/COLOR]\n' % (ebgn, eend, title) 
                                             next = False
                                             break
+                                    elif dnow < stime and not next: 
+                                        break
+                                    
 
                 
                 if logos is not None and logos != ''  and image != "" and not image.startswith('http'):
