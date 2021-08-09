@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # code by Avigdor and Nux007 (https://github.com/Nux007/Kodi-plugin.video.playlistLoader)
-import urllib, urlparse, sys, xbmcplugin ,xbmcgui, xbmcaddon, xbmc, xbmcvfs, os, json, hashlib, uuid as random
+import urllib, sys, xbmcplugin ,xbmcgui, xbmcaddon, xbmc, xbmcvfs, os, json, hashlib, uuid as random
 from datetime import datetime
 from dateutil import parser
 from dateutil import tz
