@@ -361,7 +361,10 @@ def PlayUrl(name, url, iconimage=None):
        url = common.getFinalUrl(url)
     xbmc.log('--- Playing "{0}". {1}'.format(name, url), 2)
     listitem = xbmcgui.ListItem(path=url)
-    listitem.setInfo(type="Video", infoLabels={"mediatype": "movie", "Title": name })
+    videoinfo = xbmc.InfoTagVideo(offscreen=False)
+    videoinfo.setTitle(name)
+    videoinfo.setTags(["movie"])
+    # listitem.setInfo(type="Video", infoLabels={"mediatype": "movie", "Title": name })
         
     if iconimage is not None:
         try:
